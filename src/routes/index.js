@@ -3,6 +3,7 @@ import { getHealth } from '../controllers/health.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import doctorsRoutes from './doctors.routes.js';
 import patientsRoutes from './patients.routes.js';
+import dashboardRoutes from './dashboard.routes.js';
 
 const router = Router();
 
@@ -15,7 +16,6 @@ router.use(authorize('admin'));
 
 router.use('/doctors', doctorsRoutes);
 router.use('/patients', patientsRoutes);
-
-// The dashboard router mounts here in B5.
+router.use('/dashboard', dashboardRoutes);
 
 export default router;
