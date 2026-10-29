@@ -23,8 +23,9 @@ model Doctor {
   patientLinks   DoctorPatient[]
 
   @@index([createdAt, id])
-  @@index([specialization, createdAt])
-  @@index([hospital, createdAt])
+  @@index([name, id])
+  @@index([specialization, createdAt, id])
+  @@index([hospital, createdAt, id])
   @@map("doctors")
 }
 
@@ -40,7 +41,8 @@ model Patient {
   doctorLink DoctorPatient?
 
   @@index([createdAt, id])
-  @@index([condition, createdAt])
+  @@index([name, id])
+  @@index([condition, createdAt, id])
   @@map("patients")
 }
 
@@ -52,6 +54,6 @@ model DoctorPatient {
   doctor    Doctor   @relation(fields: [doctorId], references: [id])
   patient   Patient  @relation(fields: [patientId], references: [id])
 
-  @@index([doctorId, createdAt])
+  @@index([doctorId, createdAt, id])
   @@map("doctorpatients")
 }

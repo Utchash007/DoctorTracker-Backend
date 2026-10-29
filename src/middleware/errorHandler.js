@@ -1,8 +1,8 @@
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 
-export function notFoundHandler(req, _res, next) {
-  next(ApiError.notFound(`Route ${req.method} ${req.originalUrl} not found`));
+export function notFoundHandler(_req, _res, next) {
+  next(ApiError.notFound('Route not found'));
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -12,20 +12,23 @@ export function errorHandler(err, _req, res, next) {
   }
 
   let error = err;
-  if (error?.type === 'entity.parse.failed') {
+  if (error?.type === 'entity.too.large') {
+    error = ApiError.payloadTooLarge();
+  } else if (error?.type === 'entity.parse.failed') {
     error = ApiError.badRequest('Malformed JSON body');
   }
 
   const isOperational = error instanceof ApiError;
   const status = isOperational ? error.status : 500;
   const code = isOperational ? error.code : 'INTERNAL_ERROR';
-  const message = isOperational
-    ? error.message
-    : env.isProduction
-      ? 'Internal server error'
+  const hideDetails = env.isProduction && status >= 500;
+  const message = hideDetails
+    ? 'Internal server error'
+    : isOperational
+      ? error.message
       : error?.message || 'Internal server error';
 
-  if (!isOperational) {
+  if (!isOperational || status >= 500) {
     console.error(error);
   }
 
