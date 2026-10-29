@@ -1,12 +1,16 @@
 import { Router } from 'express';
 import { getHealth } from '../controllers/health.controller.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
 // Public.
 router.get('/health', getHealth);
 
-// Resource routers (doctors, patients, dashboard) mount below
-// `router.use(authenticate)` once the Clerk middleware lands in phase B2.
+// Everything below requires a valid Clerk session token.
+router.use(authenticate);
+
+// Resource routers (doctors, patients, dashboard) mount below this point
+// starting in B3.
 
 export default router;
