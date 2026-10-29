@@ -1,0 +1,57 @@
+// Prisma 6.x is intentional: v7 ships no MongoDB connector and v8's MongoDB
+// support (Early Access) has no transaction API, which this design needs.
+// See Backend_doc/01-overview.md ("Why Prisma 6.x").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  specialization String
+  hospital       String
+  phone          String
+  email          String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  patientLinks   DoctorPatient[]
+
+  @@index([createdAt, id])
+  @@index([specialization, createdAt])
+  @@index([hospital, createdAt])
+  @@map("doctors")
+}
+
+model Patient {
+  id         String         @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  age        Int
+  gender     String?
+  phone      String
+  condition  String
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  doctorLink DoctorPatient?
+
+  @@index([createdAt, id])
+  @@index([condition, createdAt])
+  @@map("patients")
+}
+
+model DoctorPatient {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId  String   @db.ObjectId
+  patientId String   @unique @db.ObjectId
+  createdAt DateTime @default(now())
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+  patient   Patient  @relation(fields: [patientId], references: [id])
+
+  @@index([doctorId, createdAt])
+  @@map("doctorpatients")
+}
