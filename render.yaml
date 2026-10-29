@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: doctortracker-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: .
+    buildCommand: npm ci && npx prisma generate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_JWT_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
