@@ -1,12 +1,12 @@
-# Doctor Tracker — Backend API
+# Doctor Tracker - Backend API
 
-REST API for **Doctor Tracker**, a secure admin portal for managing doctors and their patients: CRUD, search/filter/sort/pagination, doctor–patient assignment, and dashboard analytics. Built with Express, Prisma and MongoDB Atlas; identity is delegated to Clerk.
+REST API for **Doctor Tracker**, a secure admin portal for managing doctors and their patients: CRUD, search/filter/sort/pagination, doctor-patient assignment, and dashboard analytics. Built with Express, Prisma and MongoDB Atlas; identity is delegated to Clerk.
 
 ---
 
-## Elevator Pitch
+## Overview
 
-Doctor Tracker gives a clinic admin one place to manage every doctor, every patient, and who is treating whom. This repository is the API behind that portal: a stateless Express service that verifies Clerk session tokens on every request, stores doctors, patients and their assignments in MongoDB Atlas through Prisma, and serves all list state — search, filters, sorting and pagination — from indexed database queries rather than in the browser. It also powers the dashboard: four live KPI counts, a patients-per-doctor ranking, and zero-filled 7/30/90-day activity timelines. The result is a small, auditable backend that a separately deployed Next.js client can consume over plain REST/JSON.
+Doctor Tracker gives a clinic admin one place to manage every doctor, every patient, and who is treating whom. This repository is the API behind that portal: a stateless Express service that verifies Clerk session tokens on every request, stores doctors, patients and their assignments in MongoDB Atlas through Prisma, and serves all list state (search, filters, sorting and pagination) from indexed database queries rather than in the browser. It also powers the dashboard: four live KPI counts, a patients-per-doctor ranking, and zero-filled 7/30/90-day activity timelines. The result is a small, auditable backend that a separately deployed Next.js client can consume over plain REST/JSON.
 
 ---
 
@@ -75,7 +75,7 @@ MongoDB Atlas (replica set)
 ### Prerequisites
 
 - **Node.js 18+** (Node 22 recommended; `render.yaml` pins 22)
-- A **MongoDB Atlas** cluster (free tier is enough). Transactions require a replica set — Atlas works; a standalone local `mongod` does not unless started as a single-node replica set.
+- A **MongoDB Atlas** cluster (free tier is enough). Transactions require a replica set (Atlas qualifies; a standalone local `mongod` does not unless started as a single-node replica set).
 - A **Clerk** application (free tier):
   1. Enable the sign-in methods you want (Google and/or email + password).
   2. Create the admin user in the Clerk Dashboard.
@@ -114,7 +114,7 @@ The server refuses to start when required env vars are missing or invalid (bad `
 | `NODE_ENV` | no | `development` (default), `test`, `production` |
 | `PORT` | no | default `5000` |
 | `DATABASE_URL` | **yes** | MongoDB Atlas connection string **including the database name**; must start with `mongodb://` or `mongodb+srv://` |
-| `CLERK_JWT_KEY` | **yes** | Clerk PEM public key (RSA). Multi-line quoted value or single line with `\n` escapes — both are accepted and validated at startup |
+| `CLERK_JWT_KEY` | **yes** | Clerk PEM public key (RSA). Multi-line quoted value or single line with `\n` escapes; both are accepted and validated at startup |
 | `CORS_ORIGIN` | no | Comma-separated allowed frontend origins. Each must be an exact `http(s)` origin: scheme + host + port, **no path and no trailing slash** (default `http://localhost:3000`) |
 
 `.env.example` is the canonical template. No secrets are committed; `.env` is git-ignored.
@@ -125,7 +125,7 @@ The server refuses to start when required env vars are missing or invalid (bad `
 |---|---|
 | `npm run dev` | start with nodemon on `PORT` (default 5000) |
 | `npm start` | start with plain Node (production) |
-| `npm run db:push` | `prisma db push` — sync `schema.prisma` to Atlas |
+| `npm run db:push` | `prisma db push`: sync `schema.prisma` to Atlas |
 | `npx prisma generate` | (re)generate the typed Prisma client |
 
 ### First request
@@ -152,7 +152,7 @@ Base path: `/api`. Everything except `GET /api/health` requires `Authorization: 
 | POST | `/doctors` | Create doctor |
 | GET | `/doctors/:id` | Get doctor |
 | PATCH | `/doctors/:id` | Update doctor (partial) |
-| DELETE | `/doctors/:id` | Delete doctor — `409` while they still have patients |
+| DELETE | `/doctors/:id` | Delete doctor; `409` while they still have patients |
 | GET | `/doctors/:id/patients` | A doctor's patients: `search`, `condition`, `page`, `limit`; items carry `assignedAt` |
 | POST | `/doctors/:id/patients` | Create patient **and** assignment in one transaction |
 | DELETE | `/doctors/:id/patients/:patientId` | Remove patient + assignment |
@@ -161,7 +161,7 @@ Base path: `/api`. Everything except `GET /api/health` requires `Authorization: 
 | PATCH | `/patients/:id` | Update patient (partial) |
 | DELETE | `/patients/:id` | Delete patient and its assignment |
 | GET | `/dashboard/summary` | `totalDoctors`, `totalPatients`, `newDoctorsThisWeek`, `newPatientsThisWeek` |
-| GET | `/dashboard/patients-per-doctor` | Ranking `{ doctorId, name, specialization, patientCount }`, `limit` 1–50 (default 10) |
+| GET | `/dashboard/patients-per-doctor` | Ranking `{ doctorId, name, specialization, patientCount }`, `limit` 1-50 (default 10) |
 | GET | `/dashboard/timeline` | Zero-filled daily counts, `range=7d\|30d\|90d` (default `30d`) |
 
 Pagination defaults: `page=1`, `limit=10` (max 50). Sort: `newest` (default), `oldest`, `name_asc`, `name_desc`. Date filters use `createdAt` with inclusive ISO `from`/`to`.
@@ -210,7 +210,7 @@ Dashboard notes: the "this week" window starts **Monday 00:00 UTC**; timeline da
 - The "one doctor per patient" invariant is enforced by the database, not by application code that could race.
 - The assignment has its own `createdAt`, which is what the doctor's patient list exposes as `assignedAt`.
 - `{ doctorId: 1, createdAt: 1, _id: 1 }` serves both the doctor's patient list and the `groupBy(doctorId)` used by the dashboard ranking (MongoDB scans it backwards for newest-first).
-- Reassigning a patient later is a one-document update in the mapping collection — the patient record stays untouched.
+- Reassigning a patient later is a one-document update in the mapping collection, leaving the patient record untouched.
 
 **Tradeoffs.**
 - Listing a doctor's patients with search/condition filters requires an `include`/`$lookup` join instead of a flat `where`.
@@ -270,7 +270,7 @@ Declared in `prisma/schema.prisma` and synced with `npx prisma db push`:
 | `doctorpatients` | `{ patientId: 1 }` unique | one doctor per patient |
 | `doctorpatients` | `{ doctorId: 1, createdAt: 1, _id: 1 }` | doctor's patient list + per-doctor counts |
 
-Search is an anchored, case-insensitive prefix match (`startsWith`) — no text indexes are used, because `$text` only matches whole words and would miss partial terms like "card" → "Cardiologist". Every `orderBy` ends with `_id` so offset pagination stays stable when timestamps tie.
+Search is an anchored, case-insensitive prefix match (`startsWith`): no text indexes are used, because `$text` only matches whole words and would miss partial terms like "card" → "Cardiologist". Every `orderBy` ends with `_id` so offset pagination stays stable when timestamps tie.
 
 ---
 
@@ -298,4 +298,4 @@ Notes for evaluators:
 
 ## License
 
-Assessment project — not licensed for redistribution.
+Assessment project. Not licensed for redistribution.
