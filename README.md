@@ -76,12 +76,21 @@ MongoDB Atlas (replica set)
 
 - **Node.js 18+** (Node 22 recommended; `render.yaml` pins 22)
 - A **MongoDB Atlas** cluster (free tier is enough). Transactions require a replica set (Atlas qualifies; a standalone local `mongod` does not unless started as a single-node replica set).
-- A **Clerk** application (free tier):
+- A **Clerk** application (free tier), configured for open-access evaluation:
   1. Enable the sign-in methods you want (Google and/or email + password).
-  2. Create the admin user in the Clerk Dashboard.
-  3. Set `publicMetadata: { "role": "admin" }` on that user.
-  4. Add `publicMetadata` to the **session token template** (Sessions → Customize session token).
-  5. Copy the **PEM public key** from API Keys.
+  2. In **Sessions → Customize session token**, set the claim that issues the admin role to every session:
+
+     ```json
+     {
+       "publicMetadata": {
+         "role": "admin"
+       }
+     }
+     ```
+
+     With this template, any newly signed-up account satisfies the API's `publicMetadata.role === "admin"` check with no per-user setup.
+  3. Keep **Organizations** disabled for the instance (Dashboard → Organizations settings), so sign-in never shows create-organization steps.
+  4. Copy the **PEM public key** from API Keys.
 
 ### Local setup
 
@@ -131,7 +140,7 @@ The server refuses to start when required env vars are missing or invalid (bad `
 ### First request
 
 ```bash
-# Replace with a real Clerk session token for an admin user
+# Replace with a real Clerk session token (an account from the open-access session template carries the admin role automatically)
 curl -H "Authorization: Bearer $CLERK_SESSION_TOKEN" \
   http://localhost:5000/api/dashboard/summary
 ```
@@ -229,7 +238,7 @@ Dashboard notes: the "this week" window starts **Monday 00:00 UTC**; timeline da
 - Password storage, reset flows, email verification, OAuth and session revocation are handled by a managed provider on a free tier that is effectively unlimited for an admin portal.
 - Bearer tokens work cleanly across separate origins, so the API never needs cookies or a shared parent domain.
 - Revocation is near-instant: a deleted/disabled user or a removed role stops working when the short-lived token expires (~60 s).
-- The role lives in Clerk metadata, so promoting an admin is a dashboard change, not a database migration.
+- The role travels in verified token claims, so changing who counts as admin is a template change, not a database migration.
 
 **Tradeoffs.**
 - A managed dependency: if Clerk is unavailable, sign-in stops (existing tokens remain valid until expiry).
